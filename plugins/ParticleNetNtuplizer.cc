@@ -2,9 +2,12 @@
 
 template <typename T>
 MvaNtuplizer<T>::MvaNtuplizer(const edm::ParameterSet& iConfig) : 
-  src_(consumes<pat::LeptonTagInfoCollection<T>>(iConfig.getParameter<edm::InputTag>("src")))
+  src_(consumes<pat::LeptonTagInfoCollection<T>>(iConfig.getParameter<edm::InputTag>("src"))),
+  srcLeps_(consumes<std::vector<T>>(iConfig.getParameter<edm::InputTag>("srcLeptons"))),
+  srcMcTable_(consumes<nanoaod::FlatTable>(iConfig.getParameter<edm::InputTag>("srcMcTable"))),
+  cut_(iConfig.getParameter<std::string>("leptonSelection")),
+  selector_(cut_)
 {
-  std::cout << "Making tree" << std::endl;
   outtree = fs->make<TTree>( "Events"  , "Events");
 
 }
@@ -18,6 +21,15 @@ void MvaNtuplizer<T>::analyze(const edm::Event& iEvent, const edm::EventSetup& i
   edm::Handle<pat::LeptonTagInfoCollection<T>> src;
   iEvent.getByToken(src_, src); 
 
+  edm::Handle<nanoaod::FlatTable> mcTable;
+  iEvent.getByToken(srcMcTable_, mcTable); 
+
+  edm::Handle<std::vector<T>> leptons;
+  iEvent.getByToken(srcLeps_, leptons); 
+
+  if (src->size() != leptons->size()){throw cms::Exception("Tables and leptons not aligned");}
+  if (src->size() != mcTable->nRows()){throw cms::Exception("Tables and leptons not aligned");}
+
 
   // First time initialize branches if theres a lepton to read them from
   if (src->size() > 0 && output_vars.empty()){
@@ -26,19 +38,31 @@ void MvaNtuplizer<T>::analyze(const edm::Event& iEvent, const edm::EventSetup& i
       output_vars[var.first]=std::vector<float>();
       outtree->Branch(var.first.c_str(), &output_vars[var.first]);
     }
+    outtree->Branch("genPartFlav", &genPartFlav);
+  
   }
   
   // now lets actually fill things
   for (size_t ilep=0; ilep < src->size(); ilep++){
+    if (!selector_( leptons->at(ilep))) continue;
+
     const pat::LeptonTagInfo<T> taginfo = (*src)[ilep];
     for (auto& var : taginfo.features().get_all()){
       output_vars[var.first]=var.second;
     }
-    outtree->Fill();
+    for (auto ivar=0u; ivar<mcTable->nColumns(); ++ivar){
+      if (mcTable->columnName(ivar).compare("genPartFlav") == 0){
+	std::cout << "genPartFlav is " << mcTable->columnData<uint8_t>(ivar)[ilep] << std::endl;
+	genPartFlav = mcTable->columnData<uint8_t>(ivar)[ilep];
+
+      }
+    }
+    outtree->Fill();    
   }
 
-   
 }
+
+
 
 template <typename T>
 void MvaNtuplizer<T>::beginJob(){}

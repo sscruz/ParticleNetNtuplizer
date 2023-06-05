@@ -4,4 +4,5 @@
 <use name="FWCore/PluginManager"/>
 <use name="PhysicsTools/UtilAlgos"/>
 <use name="FWCore/ServiceRegistry"/>
+<use name="DataFormats/NanoAOD"/>
 <flags EDM_PLUGIN="1"/>
