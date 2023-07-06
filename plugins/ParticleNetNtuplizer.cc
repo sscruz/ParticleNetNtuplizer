@@ -39,9 +39,14 @@ void MvaNtuplizer<T>::analyze(const edm::Event& iEvent, const edm::EventSetup& i
       outtree->Branch(var.first.c_str(), &output_vars[var.first]);
     }
     outtree->Branch("genPartFlav", &genPartFlav);
+    outtree->Branch("event", &event);
+    outtree->Branch("luminosityBlock", &luminosityBlock);
+    outtree->Branch("run", &run);
   
   }
-  
+  event=iEvent.eventAuxiliary().id().event();
+  luminosityBlock = iEvent.eventAuxiliary().luminosityBlock();
+  run=iEvent.eventAuxiliary().run();
   // now lets actually fill things
   for (size_t ilep=0; ilep < src->size(); ilep++){
     if (!selector_( leptons->at(ilep))) continue;
@@ -52,7 +57,6 @@ void MvaNtuplizer<T>::analyze(const edm::Event& iEvent, const edm::EventSetup& i
     }
     for (auto ivar=0u; ivar<mcTable->nColumns(); ++ivar){
       if (mcTable->columnName(ivar).compare("genPartFlav") == 0){
-	std::cout << "genPartFlav is " << mcTable->columnData<uint8_t>(ivar)[ilep] << std::endl;
 	genPartFlav = mcTable->columnData<uint8_t>(ivar)[ilep];
 
       }

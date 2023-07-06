@@ -32,5 +32,8 @@ class MvaNtuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources> {
   edm::Service<TFileService> fs;  
   std::map<std::string, std::vector<float>> output_vars;
   uint8_t genPartFlav;
+  long int event;
+  int luminosityBlock;
+  int run;
 
 };
